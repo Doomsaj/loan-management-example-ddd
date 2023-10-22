@@ -1,0 +1,63 @@
+version: '3.8'
+services:
+  scoring:
+    container_name: 'LoanManagementExmScoring'
+    build:
+      context: scoring
+      dockerfile: DockerFile
+      args:
+        JAR_FILE: ./target/loan-management-scoring-0.0.1-SNAPSHOT.jar
+    restart: on-failure
+    depends_on:
+      - zookeeper
+      - mongodb
+
+  mongodb:
+    container_name: 'LoanManagementExmDatabase'
+    image: mongo:7.0.2-jammy
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 102030
+    volumes:
+      - loanManagementExmDbData:/data/db
+
+  zookeeper:
+    container_name: 'LoanManagementExmZookeeper'
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - loanManagementExmZookeeperData:/data
+      - loanManagementExmZookeeperDataLog:/datalog
+
+  kafka-server:
+    container_name: 'LoanManagementExmKafkaServer'
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-server:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - loanManagementExmKafkaData:/var/lib/kafka/data
+
+  kafka-manager:
+    container_name: 'LoanManagementExmKafkaManager'
+    image: sheepkiller/kafka-manager
+    ports:
+      - '9000:9000'
+    environment:
+      ZK_HOSTS: zookeeper:2181
+    depends_on:
+      - zookeeper
+volumes:
+  loanManagementExmDbData:
+  loanManagementExmKafkaData:
+  loanManagementExmZookeeperData:
+  loanManagementExmZookeeperDataLog:
+
